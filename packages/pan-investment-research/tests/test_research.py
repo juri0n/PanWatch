@@ -469,12 +469,14 @@ def test_risk_rejection_retains_only_a_blocked_unapproved_draft():
 
 
 def test_timeout_after_strategy_keeps_its_view_but_cannot_publish_a_plan():
-    class SlowRisk(DirectionalModel):
+    class TimedOutRisk(DirectionalModel):
         async def complete(self, *, role, **kwargs):
             if role == "risk":
-                await asyncio.sleep(.2)
+                # Inject the failure at the intended stage. A 50 ms whole-run
+                # deadline can expire before strategy on a busy CI runner.
+                raise TimeoutError("Controlled risk-stage timeout")
             return await super().complete(role=role, **kwargs)
-    result = run(SlowRisk(), policy=ResearchPolicy(deadline_seconds=.05))
+    result = run(TimedOutRisk(), policy=ResearchPolicy(deadline_seconds=5))
     assert result.completion == "timeout" and result.status == "review"
     assert result.recommendations[0].action == "buy"
     assert result.recommendations[0].execution_status == "blocked"
