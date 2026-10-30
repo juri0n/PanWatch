@@ -1587,10 +1587,10 @@ async def lifespan(app):
         # hooks. Database initialization must precede this context.
         async with application_lifespan(app):
             from src.modules.crypto.workflow import CryptoWorkflow
-            from src.modules.crypto.adapter import SpotReader
+            from src.modules.crypto.process_reader import host_reader
             from src.platform.runtime.paths import get_data_dir
             crypto = CryptoWorkflow(get_data_dir() / "crypto.sqlite3", build_context,
-                reader_factory=lambda exchange: SpotReader(exchange, https_proxy=_get_proxy() or Settings().http_proxy))
+                reader_factory=lambda exchange: host_reader(exchange, https_proxy=_get_proxy() or Settings().http_proxy))
             app.state.crypto_workflow = crypto
             crypto.start()
             try:

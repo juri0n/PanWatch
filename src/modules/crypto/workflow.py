@@ -164,7 +164,10 @@ class CryptoWorkflow:
                     exchange = config["exchange"]
                     if exchange not in self.readers:
                         self.readers[exchange] = self.reader_factory(exchange)
-                    return collect(config, self.readers[exchange])
+                    reader = self.readers[exchange]
+                    if hasattr(reader, "prepare"):
+                        reader.prepare([p["symbol"] for p in config["positions"]])
+                    return collect(config, reader)
                 result = await asyncio.to_thread(read)
                 snapshot_from(result)  # Collection may have consumed the freshness window.
                 self.store.put("snapshot", result)

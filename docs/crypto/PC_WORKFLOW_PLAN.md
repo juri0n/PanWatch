@@ -36,3 +36,5 @@ No new dependencies beyond audited CCXT/host APScheduler. SQLite, FastAPI, exist
 7. Before touching the live PC installation: stop, back up data and deployment files, stage changes, restart and check health. Preserve startup and existing settings. Rollback restores the saved files/data. Unraid hardware deployment is skipped.
 
 Unverified at planning time: local AI/Telegram configuration, real delivery, UI rendering, current live installation commit/protection; upstream-change PR creation path (no upstream change available).
+
+Deployment audit finding: the actual PC stock environment has a cffi version constraint incompatible with the audited CCXT pin. Use a separate `.venv-crypto` and the restricted stdio ProcessSpotReader adapter. Retain the stock package versions. Regression cases cover operation whitelist, key/environment rejection, source age, batch reuse and timeout redaction. The failed combined installation was rolled back and its evidence retained.
