@@ -1,0 +1,31 @@
+# Crypto spot workflow on a PC
+
+Open `/crypto` in the existing authenticated PanWatch app. Stocks retain their own pages, database tables, calendars and schedulers.
+
+## Use
+
+1. Add up to eight manual spot pairs and decimal-string quantities. Choose OKX, Binance or Kraken; USD/USDT pairs only. Save the entire configuration, then refresh. These are manual research holdings, not exchange account balances.
+2. Quotes refresh 24/7 at a configurable 60–3600-second interval. Saving an interval wakes the polling task. Missing, future or expired source timestamps fail closed. Kraken endpoints without a source timestamp are intentionally unavailable. Network failures replace a success state; old values cannot trigger research or thresholds. USD and USDT totals stay separate.
+3. Optional thresholds support `>=` and `<=`, exact decimal prices, a 1–10080-minute cooldown, and explicit notification opt-in per rule. A continuing match records one event per cooldown. Claim timestamps survive restart. Changing the rule price constitutes a new threshold. The latest 100 events are retained.
+4. Generate a report manually. The current Daily Report agent's model/fallback routing, language and notification channels are reused. The bounded research graph runs its technical specialist and risk/decision stages, using captured crypto facts only. No stock recommendation/history repository is called. Indicators, news, onchain data, cost basis and taxes remain unavailable. The latest ten reports appear on the page; fifty are retained locally. There is no automatic AI schedule in this increment.
+5. Report notification is off unless checked for that request. Threshold notification is off unless enabled and saved. Existing notification manager retries and quiet-hours apply. Failure/skipped/unknown results are visible. This increment deliberately does not retry an ambiguous delivery after a crash: it cannot guarantee exactly-once delivery across a provider/network failure. Quiet-hours or failed threshold attempts consume cooldown; a future scan can retry only after cooldown. Nothing places a crypto order or withdraws assets.
+
+Persistence is an independent `crypto.sqlite3` under the host `DATA_DIR`; it contains no exchange credentials. Use the existing application authentication. Do not run multiple PanWatch server workers against this module; the PC launcher uses one worker. The host's administrator-configured proxy is reused. Restart after changing the proxy because exchange clients are cached.
+
+The worker CLI and container sample remain supported independently. They do not expose this host UI and do not share its configuration file. First-phase crypto scope remains public reads, synthetic/manual positions and research; a crypto paper-order ledger is not implemented in this increment. The original stock paper-trading feature remains intact.
+
+## Native PC rollout and rollback
+
+For an existing installation, retain its `.env`, `data`, virtual environment, startup registration and local launch/stop scripts. The reference installation uses `D:\Codex\Tradingview\PanWatch`, loopback port 8000 and Windows login startup. Do not replace it with the test instance on 8017.
+
+Before updating, stop the existing service and verify port 8000 is closed. Record its commit, branch and remote URLs. Back up the complete stopped data directory with `scripts/crypto_backup.py --help`; retain the old frontend `static` files and local launcher files separately. Backup archives contain sensitive application settings and must remain local. Keep a restore rehearsal in a new directory; never restore over a live database.
+
+Check out the reviewed fork commit (with `upstream` still pointing at TNT-Likely/PanWatch), install `requirements-crypto.txt` in the existing environment, rebuild the frontend using the pinned pnpm version and copy its `dist` contents to `static`. Do not overwrite the user's database with QA data. Start with the existing launcher, check health, verify auth and `/crypto`, then confirm stock pages. All crypto configuration starts empty in a fresh production installation.
+
+If rollout fails, stop, restore the old commit and frontend, and restore the stopped data backup into a new directory before selecting it as `DATA_DIR`. Restart with the preserved launcher. Retain the failed deployment's data separately for diagnosis; avoid destructive in-place rollback. No auto-merge or automatic deployment is introduced.
+
+## Evidence and remaining limitations (2026-10-31)
+
+Local: 65 crypto tests; 326 frontend tests across 72 files; 63 investment-research package tests. UI/i18n/timezone/market-color checks and production build passed. The stock suite initially recorded 1318 passes, one skip and five environment failures: the encoding case passed with the production launcher's `PYTHONUTF8=1`; four GNU Make-dependent cases could not run because GNU Make is absent on this PC. A focused 36-test ETF/module-boundary regression passed. Remote Linux compatibility results must be checked separately before rollout.
+
+Real runtime: authenticated UI save/readback retained `0.001234567890123456789`; OKX public quotes and exact valuation succeeded. The existing configured model completed a report using synthetic holdings, with notifications disabled. Real Telegram delivery, Unraid hardware deployment, sustained multi-day availability and a real new-upstream merge/PR remain unverified. UI breakpoint/theme QA and native production rollout must be recorded separately when completed; source/build test success does not imply either happened.

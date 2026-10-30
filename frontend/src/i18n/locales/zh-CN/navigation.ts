@@ -1,5 +1,6 @@
 export const navigation = {
   items: {
+    crypto: 'Crypto 现货',
     gettingStarted: '引导中心',
     home: '首页',
     portfolio: '持仓',

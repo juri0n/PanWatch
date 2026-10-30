@@ -1,6 +1,7 @@
 // Keep dictionaries outside the entry bundle and load namespaces on demand.
 export const resourceLoaders = {
   'zh-CN': {
+    crypto: () => import('./locales/zh-CN/crypto').then(m => m.crypto),
     common: () => import('./locales/zh-CN/common').then(m => m.common),
     navigation: () => import('./locales/zh-CN/navigation').then(m => m.navigation),
     auth: () => import('./locales/zh-CN/auth').then(m => m.auth),
@@ -9,6 +10,7 @@ export const resourceLoaders = {
     bizUi: () => import('./locales/zh-CN/biz-ui').then(m => m.bizUi),
   },
   'en-US': {
+    crypto: () => import('./locales/en-US/crypto').then(m => m.crypto),
     common: () => import('./locales/en-US/common').then(m => m.common),
     navigation: () => import('./locales/en-US/navigation').then(m => m.navigation),
     auth: () => import('./locales/en-US/auth').then(m => m.auth),

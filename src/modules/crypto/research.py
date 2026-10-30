@@ -26,7 +26,8 @@ def to_research_input(snapshot: Snapshot, *, run_id: str, language="zh-CN"):
             quote_expires_at=source + timedelta(seconds=snapshot.max_age_seconds)))
         evidence.append(Evidence(id=f"{key}/quote/{quote.source_ms}", stock_key=key, domain="technical",
             source=f"CCXT public spot/{quote.exchange}", observed_at=source, available_at=observed,
-            content={"quote": quote.as_dict(), "asset_class": "crypto_spot", "market_hours": "24/7",
+            content={"quote": {**quote.as_dict(), "current_price": float(quote.price)},
+                     "asset_class": "crypto_spot", "market_hours": "24/7",
                      "unavailable_domains": list(DATA_GAPS),
                      "context": "Spot crypto trades 24/7. Company financial statements do not apply. "
                                 "Do not invent unavailable fundamentals, news, flow or onchain data."}))

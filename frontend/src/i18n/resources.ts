@@ -1,3 +1,5 @@
+import { crypto as enCrypto } from './locales/en-US/crypto'
+import { crypto as zhCrypto } from './locales/zh-CN/crypto'
 import { auth as enAuth } from './locales/en-US/auth'
 import { common as enCommon } from './locales/en-US/common'
 import { configuration as enConfiguration } from './locales/en-US/configuration'
@@ -13,6 +15,7 @@ import { bizUi as zhBizUi } from './locales/zh-CN/biz-ui'
 import type { TranslationShape } from './resource-types'
 
 export const zhCN = {
+  crypto: zhCrypto,
   common: zhCommon,
   configuration: zhConfiguration,
   auth: zhAuth,
@@ -22,6 +25,7 @@ export const zhCN = {
 } as const
 
 export const enUS = {
+  crypto: enCrypto,
   common: enCommon,
   configuration: enConfiguration,
   auth: enAuth,

@@ -58,7 +58,7 @@ class SpotReader:
     to an Agent. No credentials can be supplied through this API or its config.
     """
 
-    def __init__(self, exchange: str, *, max_age_seconds: int = 120):
+    def __init__(self, exchange: str, *, max_age_seconds: int = 120, https_proxy: str | None = None):
         if exchange not in EXCHANGES:
             raise ValueError("unsupported exchange")
         if type(max_age_seconds) is not int or not 1 <= max_age_seconds <= 300:
@@ -70,7 +70,7 @@ class SpotReader:
         }
         # Explicit infrastructure setting only, never an Agent/config JSON option.
         # Do not enable requests.trust_env: that would also read .netrc credentials.
-        proxy = os.environ.get("PANWATCH_CRYPTO_HTTPS_PROXY")
+        proxy = https_proxy or os.environ.get("PANWATCH_CRYPTO_HTTPS_PROXY")
         if proxy:
             parsed = urlsplit(proxy)
             if parsed.scheme not in {"http", "https"} or not parsed.hostname:
