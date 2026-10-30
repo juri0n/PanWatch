@@ -56,6 +56,9 @@ jobs:
     if: needs.candidate.outputs.changed == 'true'
     permissions:
       contents: read
+      # Permission ceiling required by the reusable workflow's PR-only status
+      # writer. Its source-executing test jobs still declare contents:read only.
+      statuses: write
     uses: ./.github/workflows/crypto-compat.yml
     with:
       ref: ${{ needs.candidate.outputs.sha }}
