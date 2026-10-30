@@ -1,0 +1,95 @@
+name: Crypto upstream candidate
+on:
+  schedule:
+    - cron: '23 2 * * *'
+  workflow_dispatch:
+concurrency:
+  group: crypto-upstream-sync
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.repository != 'TNT-Likely/PanWatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.merge.outputs.sha }}
+      changed: ${{ steps.merge.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+      - id: merge
+        env:
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          git remote add upstream https://github.com/TNT-Likely/PanWatch.git
+          git fetch upstream main
+          python scripts/crypto_sync.py --base "origin/$BASE" --upstream upstream/main --output sync-result.json --github-output "$GITHUB_OUTPUT"
+      - if: steps.merge.outputs.changed == 'true'
+        env:
+          SHA: ${{ steps.merge.outputs.sha }}
+        run: git push --force-with-lease origin "$SHA:refs/heads/sync/upstream"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-merge-result
+          path: sync-result.json
+  pending:
+    needs: candidate
+    if: needs.candidate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ needs.candidate.outputs.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: gh api --method POST "repos/$GH_REPO/statuses/$SHA" -f state=pending -f context=panwatch-crypto/upstream-compat -f target_url="$RUN_URL" -f description='Crypto and stock compatibility checks running'
+  compatibility:
+    needs: [candidate, pending]
+    if: needs.candidate.outputs.changed == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/crypto-compat.yml
+    with:
+      ref: ${{ needs.candidate.outputs.sha }}
+  status:
+    needs: [candidate, pending, compatibility]
+    if: always() && needs.candidate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ needs.candidate.outputs.sha }}
+          RESULT: ${{ needs.compatibility.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          state=failure
+          if [ "$RESULT" = success ]; then state=success; fi
+          gh api --method POST "repos/$GH_REPO/statuses/$SHA" -f state="$state" -f context=panwatch-crypto/upstream-compat -f target_url="$RUN_URL" -f description="Compatibility result: $RESULT"
+  pull-request:
+    needs: [candidate, compatibility, status]
+    if: needs.candidate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          count=$(gh pr list --head sync/upstream --base "$BASE" --state open --json number --jq length)
+          if [ "$count" = 0 ]; then
+            gh pr create --head sync/upstream --base "$BASE" --title 'chore: sync PanWatch upstream' --body 'Official upstream merged into an isolated candidate. Crypto, stock backend/packages and frontend checks passed. Commit status panwatch-crypto/upstream-compat is bound to the candidate SHA. Review migrations, licenses, backup and rollback before deployment. No automatic merge or deployment.'
+          fi

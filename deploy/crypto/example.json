@@ -1,0 +1,8 @@
+{
+  "exchange": "okx",
+  "interval_seconds": 120,
+  "positions": [
+    {"symbol": "BTC/USDT", "quantity": "0.001"},
+    {"symbol": "ETH/USDT", "quantity": "0.01"}
+  ]
+}

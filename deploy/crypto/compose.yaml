@@ -1,0 +1,21 @@
+services:
+  crypto-data:
+    build:
+      context: ../..
+      dockerfile: deploy/crypto/Dockerfile
+    image: panwatch-crypto-data:local
+    restart: unless-stopped
+    user: "99:100"
+    environment:
+      TZ: UTC
+      PANWATCH_CRYPTO_HTTPS_PROXY: ${PANWATCH_CRYPTO_HTTPS_PROXY:-}
+    volumes:
+      - ${CRYPTO_CONFIG_DIR:?Set CRYPTO_CONFIG_DIR}:/config:ro
+      - ${CRYPTO_DATA_DIR:?Set CRYPTO_DATA_DIR}:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    # No ports, credentials, Docker socket or stock database mounts.

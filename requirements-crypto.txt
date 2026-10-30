@@ -1,0 +1,3 @@
+# Opt-in worker; stock runtime requirements remain unchanged.
+ccxt==4.5.91
+APScheduler==3.11.2
