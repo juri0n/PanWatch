@@ -161,7 +161,8 @@ def test_real_research_graph_and_renderer_with_controlled_model(tmp_path, monkey
     fixtures = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fixtures)
     model = fixtures.Model()
-    monkeypatch.setattr(gateway, "ResearchModelGateway", lambda client: model)
+    from src.modules.crypto import research as crypto_research
+    monkeypatch.setattr(crypto_research, "crypto_model_gateway", lambda client: model)
     sent = []
     async def notify(title, content):
         sent.append(content)
@@ -211,3 +212,20 @@ def test_real_sqlite_backup_and_restore(tmp_path):
     restore(archive, tmp_path / 'restored')
     restored = make(tmp_path / 'restored')
     assert restored.view()["config"] == CONFIG
+
+
+def test_crypto_gateway_explains_redacted_position_presence_without_mutating_inputs(monkeypatch):
+    pytest.importorskip("openai")
+    from src.modules.crypto.research import crypto_model_gateway
+    from src.modules.research.orchestration.gateway import ResearchModelGateway
+    seen = []
+    async def complete(self, **kwargs):
+        seen.append(kwargs["messages"])
+        return "controlled response"
+    monkeypatch.setattr(ResearchModelGateway, "complete", complete)
+    messages = [{"role": "system", "content": "Base research policy"}, {"role": "user", "content": "Captured facts"}]
+    result = run(crypto_model_gateway(None).complete(messages=messages))
+    assert result == "controlled response"
+    assert "redacted presence flag (0/1), NEVER token units" in seen[0][0]["content"]
+    assert "Exact holding amounts are withheld" in seen[0][0]["content"]
+    assert messages[0]["content"] == "Base research policy"

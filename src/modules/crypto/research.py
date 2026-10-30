@@ -5,6 +5,24 @@ from decimal import Decimal, localcontext
 from .contracts import Snapshot, Instrument, DATA_GAPS
 
 
+def crypto_model_gateway(client):
+    """Add crypto semantics without changing the shared privacy-preserving engine."""
+    from copy import deepcopy
+    from src.modules.research.orchestration.gateway import ResearchModelGateway
+
+    class CryptoModelGateway(ResearchModelGateway):
+        async def complete(self, **kwargs):
+            messages = deepcopy(kwargs["messages"])
+            messages[0]["content"] += (
+                " Crypto spot boundary: held_quantity is a redacted presence flag (0/1), NEVER token units or an account balance."
+                " Exact holding amounts are withheld from models. Do not state any position amount, unit count or cost basis."
+                " This is a 24/7 public spot research workflow, without order or withdrawal capability."
+                " Only captured quotes are available; do not invent indicators, company fundamentals, news or onchain facts.")
+            return await super().complete(**{**kwargs, "messages": messages})
+
+    return CryptoModelGateway(client)
+
+
 def to_research_input(snapshot: Snapshot, *, run_id: str, language="zh-CN"):
     # The public worker has no dependency on the research runtime. The host already
     # installs this package; keep this import lazy until that integration is enabled.

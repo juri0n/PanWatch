@@ -226,11 +226,12 @@ class CryptoWorkflow:
 
     async def research(self, prepared, context):
         from pan_investment_research import InvestmentResearch, ResearchPolicy
-        from src.modules.research.orchestration.gateway import ResearchModelGateway, EvidenceTools
+        from src.modules.research.orchestration.gateway import EvidenceTools
+        from .research import crypto_model_gateway
         policy = ResearchPolicy(profile="intraday", graph="intraday_fast", specialists=["technical"],
             trigger_mode="always", debate=False, max_feedback=0, deadline_seconds=90,
             max_attempts=4, max_tools=2, max_total_tokens=16000, max_output_tokens=2048)
-        return await asyncio.wait_for(InvestmentResearch().run(prepared, model=ResearchModelGateway(context.ai_client),
+        return await asyncio.wait_for(InvestmentResearch().run(prepared, model=crypto_model_gateway(context.ai_client),
             tools=EvidenceTools(prepared.evidence), policy=policy), timeout=95)
 
     async def run_report(self, report, notify):
@@ -252,11 +253,13 @@ class CryptoWorkflow:
             # A report is historical evidence. Never let late recommendations trigger delivery.
             snapshot_from(result)
             payload = research.model_dump(mode="json")
-            markdown = "# PanWatch Crypto · 24/7\n\n" + build_report("intraday_monitor", payload, securities=[s.model_dump(mode="json") for s in prepared.securities],
+            markdown = build_report("intraday_monitor", payload, securities=[s.model_dump(mode="json") for s in prepared.securities],
                 evidence=[e.model_dump(mode="json") for e in prepared.evidence], as_of=prepared.as_of.isoformat(), language=language)["content"]
-            notice = ("Public spot quotes and manual holdings only. Indicators, news, onchain, cost basis and tax data are unavailable. No execution capability."
-                      if language == "en-US" else "仅使用公共现货报价与手动持仓；暂无 K 线指标、新闻、链上、成本或税务数据。不具备交易执行能力。")
-            markdown = notice + "\n\n" + markdown
+            notice = ("Public spot quotes and manual holdings only. Models see position presence, never quantities. Indicators, news, onchain, cost basis and tax data are unavailable. No execution capability."
+                      if language == "en-US" else "仅使用公共现货报价与手动持仓；模型只接收是否持仓的标记，不接收数量。暂无 K 线指标、新闻、链上、成本或税务数据。不具备交易执行能力。")
+            facts = [f"- {p['symbol']} · {p['quantity']} · {p['price']} {p['quote_currency']} · {p['source_time']}" for p in snapshot.as_dict()["positions"]]
+            markdown = markdown.replace("## 个股分析", "## 现货标的分析").replace("## Stock analysis", "## Spot instrument analysis")
+            markdown = "# PanWatch Crypto · 24/7\n\n" + notice + "\n\n" + "\n".join(facts) + "\n\n" + markdown
             report.update(status=research.completion, markdown=markdown, research=payload, snapshot=snapshot.as_dict())
             self.store.report(report)  # Persist evidence before attempting external delivery.
             if notify and research.completion == "complete":
