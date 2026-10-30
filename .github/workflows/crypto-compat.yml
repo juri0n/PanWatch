@@ -63,3 +63,25 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:ui && pnpm check:i18n && pnpm check:market-colors
       - run: pnpm run test --run && pnpm build
+
+  required-status:
+    needs: [crypto, stock-backend, stock-frontend]
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      # No checkout, candidate code, or inherited secrets in this write-capable job.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          CRYPTO_RESULT: ${{ needs.crypto.result }}
+          BACKEND_RESULT: ${{ needs.stock-backend.result }}
+          FRONTEND_RESULT: ${{ needs.stock-frontend.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          state=failure
+          if [ "$CRYPTO_RESULT" = success ] && [ "$BACKEND_RESULT" = success ] && [ "$FRONTEND_RESULT" = success ]; then state=success; fi
+          gh api --method POST "repos/$GH_REPO/statuses/$SHA" -f state="$state" -f context=panwatch-crypto/upstream-compat -f target_url="$RUN_URL" -f description="Crypto/stock/frontend compatibility: $state"
+          test "$state" = success
