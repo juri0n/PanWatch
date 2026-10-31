@@ -16,12 +16,13 @@ def now_ms():
     return int(time.time()*1000)
 
 
-def history(reader, symbol, timeframe):
+def history(reader, symbol, timeframe, include_bars=False):
     bars=normalize_bars(reader.bars(symbol,timeframe=timeframe,limit=121),timeframe,now_ms())
     status='ok' if len(bars)>=120 and any(number(row['volume'])>0 for row in bars) else 'insufficient'
     return {'timeframe':timeframe,'status':status,'bar_count':len(bars),
             'source_close_ms':bars[-1]['timestamp_ms']+TIMEFRAMES[timeframe] if bars else None,
-            'bars_sha256':hashlib.sha256(json.dumps(bars,sort_keys=True).encode()).hexdigest()}
+            'bars_sha256':hashlib.sha256(json.dumps(bars,sort_keys=True).encode()).hexdigest(),
+            **({'bars':bars} if include_bars else {})}
 
 
 def valid_entry(item, *, at_ms):
@@ -36,7 +37,7 @@ def valid_entry(item, *, at_ms):
         return False
 
 
-def run_probe(config, *, reader_factory=SpotReader, clock=time.monotonic):
+def run_probe(config, *, reader_factory=SpotReader, clock=time.monotonic, include_bars=False):
     started=now_ms()
     deadline=clock()+config.deadline_seconds
     def budget():
@@ -61,7 +62,7 @@ def run_probe(config, *, reader_factory=SpotReader, clock=time.monotonic):
             try:
                 budget()
                 item['history_calls']+=1
-                item['history'].append(history(reader,item['symbol'],timeframe))
+                item['history'].append(history(reader,item['symbol'],timeframe,include_bars))
             except Exception as exc:
                 item['history'].append({'timeframe':timeframe,'status':'unavailable','error_type':type(exc).__name__})
         entries.append(item)
@@ -105,7 +106,7 @@ def run_probe(config, *, reader_factory=SpotReader, clock=time.monotonic):
     accepted.sort(key=lambda item:item['symbol'])
     accepted.sort(key=lambda item:number(item['quote_volume']),reverse=True)
     return {'schema_version':1,'run_id':uuid.uuid4().hex,'settings_version':config.version,'config':config.as_dict(),
-            'mode':'public-universe-probe','classification_scope':'explicit_operator_review_not_full_market_classification',
+            'mode':'public-universe-probe','includes_bars':include_bars,'classification_scope':'explicit_operator_review_not_full_market_classification',
             'started_ms':started,'finished_ms':finished,'elapsed_ms':finished-started,
             'status':'partial' if any(item['status']!='eligible' for item in entries) else 'complete' if entries else 'empty',
             'selection':selection,'entries':entries,'accepted':accepted,'accepted_count':len(accepted),
@@ -121,11 +122,13 @@ def run_probe(config, *, reader_factory=SpotReader, clock=time.monotonic):
 
 def main():
     try:
+        if sys.argv[1:] not in ([],['--with-bars']):
+            raise ValueError('unsupported probe option')
         raw=sys.stdin.read(16385)
         if len(raw)>16384:
             raise ValueError('request too large')
         config=UniverseConfig.from_dict(json.loads(raw))
-        print(json.dumps({'result':run_probe(config)},allow_nan=False))
+        print(json.dumps({'result':run_probe(config,include_bars=bool(sys.argv[1:]))},allow_nan=False))
         return 0
     except Exception as exc:
         print(json.dumps({'error_type':type(exc).__name__}))

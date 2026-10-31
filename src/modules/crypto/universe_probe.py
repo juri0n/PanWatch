@@ -17,13 +17,15 @@ from .adapter import number, TIMEFRAMES, utc_ms
 from .contracts import Instrument
 
 
-def collect_probe(config, python, *, https_proxy=None):
+def collect_probe(config, python, *, https_proxy=None, include_bars=False):
+    if type(include_bars) is not bool:
+        raise ValueError('invalid capture mode')
     env={key:os.environ[key] for key in ('SystemRoot','WINDIR','TEMP','TMP','PATH','HOME','USERPROFILE') if key in os.environ}
     env['PYTHONUTF8']='1'
     proxy=https_proxy or os.environ.get('PANWATCH_CRYPTO_HTTPS_PROXY')
     if proxy:
         env['PANWATCH_CRYPTO_HTTPS_PROXY']=proxy
-    result=subprocess.run([str(Path(python).resolve(strict=True)),'-m','src.modules.crypto.scan_worker'],
+    result=subprocess.run([str(Path(python).resolve(strict=True)),'-m','src.modules.crypto.scan_worker',*(['--with-bars'] if include_bars else [])],
         input=json.dumps(config.as_dict()),capture_output=True,text=True,encoding='utf-8',
         env=env,cwd=Path(__file__).resolve().parents[3],timeout=config.deadline_seconds+20,
         creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
@@ -33,6 +35,8 @@ def collect_probe(config, python, *, https_proxy=None):
     if set(envelope)!={'result'}:
         raise ValueError('invalid public probe response')
     data=envelope['result']
+    if data.get('includes_bars',False)!=include_bars:
+        raise ValueError('probe capture mode mismatch')
     received_ms=int(time.time()*1000)
     if not utc_ms(data['started_ms'])<=utc_ms(data['finished_ms'])<=received_ms or data['finished_ms']-data['started_ms']>(config.deadline_seconds+20)*1000:
         raise ValueError('invalid probe observation times')
