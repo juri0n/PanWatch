@@ -130,3 +130,43 @@ class SpotReader:
         if not result:
             raise DataUnavailable("no completed candles")
         return result
+
+    def public_markets(self):
+        """Projected public metadata for the opt-in probe, never the raw SDK client."""
+        markets = self.__client.load_markets()
+        if len(markets) > 20000:
+            raise DataUnavailable("market directory exceeds probe budget")
+        keys = ("symbol", "base", "quote", "spot", "contract", "active")
+        return [{key: market.get(key) for key in keys} for market in markets.values()]
+
+    def public_statistics(self, symbols):
+        """One bulk public call; expose native turnover provenance, not inferred volume."""
+        if not isinstance(symbols, list) or not 1 <= len(symbols) <= 1000 or len(set(symbols)) != len(symbols):
+            raise ValueError("invalid statistics scope")
+        for symbol in symbols:
+            self._market(symbol)
+        if self.__client.has.get("fetchTickers") is not True:
+            raise DataUnavailable("native bulk tickers unavailable")
+        tickers = self.__client.fetch_tickers(symbols)
+        result = []
+        for symbol in symbols:
+            ticker = tickers.get(symbol) or {}
+            info = ticker.get("info") or {}
+            # Audited against the pinned CCXT parsers: Kraken computes quoteVolume
+            # from base volume * VWAP, which is not native reported turnover.
+            fields = {"binance": ("quoteVolume", "amount"), "okx": ("volCcy24h",), "kraken": ()}[self.exchange]
+            native_field = next((key for key in fields if info.get(key) is not None), None)
+            result.append({"symbol": ticker.get("symbol"), "source_ms": ticker.get("timestamp"),
+                           "last": ticker.get("last"), "quote_volume": info.get(native_field) if native_field else None,
+                           "quote_volume_source": native_field,
+                           "reported_quote_volume": ticker.get("quoteVolume")})
+        return result
+
+    def public_book(self, symbol):
+        self._market(symbol)
+        if self.__client.has.get("fetchOrderBook") is not True:
+            raise DataUnavailable("public order book unavailable")
+        book = self.__client.fetch_order_book(symbol, limit=5)
+        return {"symbol": book.get("symbol"), "source_ms": book.get("timestamp"),
+                "bid": book["bids"][0][0] if book.get("bids") else None,
+                "ask": book["asks"][0][0] if book.get("asks") else None}
