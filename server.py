@@ -1586,7 +1586,18 @@ async def lifespan(app):
         # Preserve FastAPI's original lifespan, including registered recovery
         # hooks. Database initialization must precede this context.
         async with application_lifespan(app):
-            yield
+            from src.modules.crypto.workflow import CryptoWorkflow
+            from src.modules.crypto.process_reader import host_reader
+            from src.platform.runtime.paths import get_data_dir
+            crypto = CryptoWorkflow(get_data_dir() / "crypto.sqlite3", build_context,
+                reader_factory=lambda exchange: host_reader(exchange, https_proxy=_get_proxy() or Settings().http_proxy))
+            app.state.crypto_workflow = crypto
+            crypto.start()
+            try:
+                yield
+            finally:
+                await crypto.stop()
+                app.state.crypto_workflow = None
     finally:
         if scheduler:
             scheduler.shutdown()

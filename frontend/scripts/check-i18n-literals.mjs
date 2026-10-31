@@ -8,7 +8,7 @@ const collectSourceFiles = (directory) => fs.readdirSync(directory, { withFileTy
   const absolutePath = path.join(directory, entry.name)
   if (entry.isDirectory()) return collectSourceFiles(absolutePath)
   if (!/\.(ts|tsx)$/.test(entry.name) || /\.(test|spec)\.(ts|tsx)$/.test(entry.name)) return []
-  const relativePath = path.relative(frontendRoot, absolutePath)
+  const relativePath = path.relative(frontendRoot, absolutePath).split(path.sep).join('/')
   return relativePath.includes('/i18n/locales/') ? [] : [relativePath]
 })
 

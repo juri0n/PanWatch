@@ -8,6 +8,7 @@ describe('route page loaders', () => {
       'login',
       'dashboard',
       'gettingStarted',
+      'crypto',
       'stocks',
       'opportunities',
       'paperTrading',

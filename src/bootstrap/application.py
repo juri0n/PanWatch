@@ -189,6 +189,10 @@ app.include_router(
 
 app.include_router(notifications_api.router, prefix="/api/notifications", tags=["notifications"], dependencies=protected)
 
+# Optional crypto module: preserves the same authentication boundary as stocks.
+from src.modules.crypto.api import router as crypto_router
+app.include_router(crypto_router, prefix="/api/crypto", tags=["crypto"], dependencies=protected)
+
 app.router.on_startup.append(assistant_task_runner.recover_pending)
 app.router.on_startup.append(context_export_runner.recover_pending)
 app.router.on_shutdown.append(context_export_runner.shutdown)

@@ -24,6 +24,7 @@ const {
   GettingStartedPage,
   OpportunitiesPage,
   StocksPage,
+  CryptoPage,
   AgentsPage,
   SettingsPage,
   DataSourcesPage,
@@ -37,6 +38,7 @@ const {
 
 const NAV_ITEMS: Array<{ to: string; icon: typeof LayoutDashboard; labelKey: NavigationItemKey }> = [
   { to: '/', icon: LayoutDashboard, labelKey: 'home' },
+  { to: '/crypto', icon: Activity, labelKey: 'crypto' },
   { to: '/portfolio', icon: List, labelKey: 'portfolio' },
   { to: '/assistant', icon: MessageCircle, labelKey: 'assistant' },
   { to: '/opportunities', icon: Sparkles, labelKey: 'opportunities' },
@@ -304,6 +306,7 @@ function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/getting-started" element={<GettingStartedPage />} />
               <Route path="/opportunities" element={<OpportunitiesPage />} />
+              <Route path="/crypto" element={<CryptoPage />} />
               <Route path="/portfolio" element={<StocksPage />} />
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/evaluations" element={<EvaluationsPage />} />

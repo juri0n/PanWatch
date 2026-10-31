@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 .venv/
+.venv-crypto/
 venv/
 data/*.db
 data/*.json

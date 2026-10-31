@@ -3,6 +3,7 @@ import { navigation as zhNavigation } from '../zh-CN/navigation'
 
 export const navigation = {
   items: {
+    crypto: 'Crypto spot',
     gettingStarted: 'Guide center',
     home: 'Home',
     portfolio: 'Portfolio',
