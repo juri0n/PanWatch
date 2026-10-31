@@ -471,6 +471,12 @@ class KlineCollector:
         if klines is None:
             klines = self.get_klines(symbol, days=120)
 
+        return self.calculate_indicators(klines)
+
+    @staticmethod
+    def calculate_indicators(klines: list[KlineData]) -> TechnicalIndicators:
+        """Shared pure calculation; periods count input bars, without a market/calendar."""
+
         if not klines:
             return TechnicalIndicators()
 
@@ -636,6 +642,16 @@ class KlineCollector:
         if not klines:
             return {"error": "无K线数据"}
         indicators = self.get_technical_indicators(klines=klines)
+
+        return self.summarize_klines(klines, indicators=indicators)
+
+    @staticmethod
+    def summarize_klines(klines: list[KlineData], *, indicators=None) -> dict:
+        """Stock-compatible pure summary; callers adapt timeframe metadata explicitly."""
+        if not klines:
+            return {"error": "无K线数据"}
+        if indicators is None:
+            indicators = KlineCollector.calculate_indicators(klines)
 
         # 最近5日表现
         recent_5 = klines[-5:] if len(klines) >= 5 else klines
