@@ -93,6 +93,7 @@ export default function Crypto() {
   return <div className="space-y-6 p-4 sm:p-6 max-w-6xl mx-auto">
     <header className="space-y-2">
       <h1 className="text-2xl font-semibold">{t('title')}</h1>
+      <Link className="text-primary underline text-sm" to="/crypto/opportunities">{t('opportunities.title')}</Link>
       <p className="text-sm text-muted-foreground">{t('intro')}</p>
       <Link className="text-primary underline text-sm" to="/settings">{t('settings')}</Link>
       {busy && <p role="status" className="text-sm text-muted-foreground">{t('working')}</p>}

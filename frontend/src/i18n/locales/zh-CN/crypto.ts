@@ -115,5 +115,107 @@ export const crypto = {
     "resistance_m": "压力（20根）",
     "change_5_bars": "近5根涨跌幅 %",
     "change_20_bars": "近20根涨跌幅 %"
+  },
+  "opportunities": {
+    "title": "Crypto 机会",
+    "description": "使用公共现货数据和共用规则筛选；分数仅为未校准的技术参考。历史快照不代表当前机会，也不是交易指令。",
+    "holdingsLink": "现货持仓",
+    "stocksLink": "股票机会页",
+    "loading": "正在读取机会数据…",
+    "loadFailed": "机会数据读取失败，请稍后重试。",
+    "scanSettings": "候选池设置",
+    "quote": "报价币种",
+    "limit": "最多分析数量（1–10）",
+    "advanced": "数据筛选设置",
+    "assets": "已审核普通资产范围（逗号分隔）",
+    "volume": "最低24小时报价币成交额",
+    "spread": "最大盘口价差（%）",
+    "settingsHint": "未审核币种会排除；USD与USDT分池。扫描为手动触发，60秒内不能重复启动；持仓与预警请求优先。Binance盘口缺少源时间、Kraken原生成交额不足时将明确排除，不自动切换交易所。",
+    "scan": "保存并扫描",
+    "cancel": "取消扫描",
+    "cancelRequested": "已请求取消扫描",
+    "started": "扫描已进入后台任务",
+    "actionFailed": "操作失败：可能已有任务或仍在冷却，请稍后重试。",
+    "invalid": "请修正标出的候选池设置。",
+    "filters": "筛选条件",
+    "timeframe": "分析周期",
+    "strategy": "策略条件",
+    "holding": "持仓范围",
+    "state": "规则状态",
+    "freshness": "数据状态",
+    "risk": "风险状态",
+    "minScore": "最低技术分（0–100）",
+    "results": "候选结果",
+    "counts": "显示 {{shown}} 条；上次捕获 {{captured}} 条，其中当前有效 {{current}} 条。本轮选择 {{selected}} / 审核范围内合格市场 {{markets}}。",
+    "capturedAt": "结果捕获时间",
+    "empty": "暂无符合当前筛选的记录。请先扫描，或查看数据范围、历史快照及筛选条件；这不代表全市场没有机会。",
+    "noTags": "暂无规则标签",
+    "evidence": "查看证据",
+    "snapshot": "快照标识",
+    "validation": {
+      "limit": "数量须为1–10的整数。",
+      "volume": "请输入有效的正成交额，不能填写币种名称。",
+      "spread": "请输入大于0、不超过5的价差百分比。",
+      "assets": "请填写去重的普通资产代码；稳定币不能列为普通基础资产。",
+      "minScore": "请输入0–100；暂保留上次有效筛选。"
+    },
+    "jobs": {
+      "empty": "尚未扫描",
+      "running": "扫描进行中",
+      "cancelling": "正在取消",
+      "complete": "扫描完成",
+      "cancelled": "扫描已取消",
+      "failed": "扫描失败，上次结果保留",
+      "interrupted": "任务因重启中断"
+    },
+    "states": {
+      "all": "全部状态",
+      "matched": "规则匹配",
+      "watch": "观察",
+      "excluded": "规则回避"
+    },
+    "holdings": {
+      "all": "全部持仓范围",
+      "held": "已持仓",
+      "unheld": "未持仓"
+    },
+    "freshnessOptions": {
+      "all": "当前与历史",
+      "current": "仅当前有效",
+      "historical": "历史快照"
+    },
+    "risks": {
+      "all": "全部风险状态",
+      "unknown": "未校准 / 未知"
+    },
+    "strategies": {
+      "all": "全部策略",
+      "trend_follow": "均线多头",
+      "macd_golden": "MACD金叉状态",
+      "volume_breakout": "放量条件",
+      "momentum": "周期动量",
+      "pullback": "接近支撑",
+      "rebound": "跌幅观察"
+    },
+    "exclusions": {
+      "invalid_spot_identity": "无效现货标识",
+      "market_identity_mismatch": "交易对信息不一致",
+      "not_confirmed_spot": "未明确确认为现货",
+      "inactive_or_unknown": "不活跃或状态未知",
+      "different_quote_currency": "其他报价币种",
+      "asset_classification_unknown": "资产分类尚未审核",
+      "duplicate_market": "重复市场",
+      "below_turnover_threshold": "成交额未达门槛",
+      "invalid_or_missing_statistics": "统计数据缺失或无效",
+      "native_turnover_missing": "缺少原生报价币成交额",
+      "statistics_time_missing": "统计源时间缺失",
+      "invalid_or_missing_liquidity": "流动性数据未通过",
+      "incomplete_or_expired_evidence": "证据不足或已过期",
+      "wide_spread": "盘口价差过大",
+      "book_time_missing": "盘口源时间缺失"
+    },
+    "coverageDetails": "数据覆盖与排除原因",
+    "reasonHint": "同一币对可能有多个原因，数量不可相加；审核范围不是全市场。",
+    "otherReason": "其他数据校验未通过"
   }
 } as const
