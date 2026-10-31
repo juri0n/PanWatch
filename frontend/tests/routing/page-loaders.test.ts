@@ -9,6 +9,7 @@ describe('route page loaders', () => {
       'dashboard',
       'gettingStarted',
       'crypto',
+      'cryptoOpportunities',
       'stocks',
       'opportunities',
       'paperTrading',

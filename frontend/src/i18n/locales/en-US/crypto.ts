@@ -115,5 +115,107 @@ export const crypto = {
     "resistance_m": "Resistance (20 bars)",
     "change_5_bars": "5-bar change %",
     "change_20_bars": "20-bar change %"
+  },
+  "opportunities": {
+    "title": "Crypto opportunities",
+    "description": "Screen public spot data with shared rules. Scores are uncalibrated technical references. Historical snapshots are not current opportunities or trade instructions.",
+    "holdingsLink": "Spot holdings",
+    "stocksLink": "Stock opportunities",
+    "loading": "Loading opportunities…",
+    "loadFailed": "Unable to load opportunities. Please retry.",
+    "scanSettings": "Universe settings",
+    "quote": "Quote currency",
+    "limit": "Maximum pairs (1–10)",
+    "advanced": "Data filters",
+    "assets": "Reviewed plain assets (comma separated)",
+    "volume": "Minimum 24h quote turnover",
+    "spread": "Maximum book spread (%)",
+    "settingsHint": "Unreviewed assets are excluded; USD/USDT pools remain separate. Scans are manual with a 60s start cooldown; holdings and alerts have priority. Missing Binance book source times or Kraken native turnover are excluded without switching exchanges.",
+    "scan": "Save and scan",
+    "cancel": "Cancel scan",
+    "cancelRequested": "Cancellation requested",
+    "started": "Scan started in the background",
+    "actionFailed": "Operation failed: another task or cooldown may be active. Please retry later.",
+    "invalid": "Correct the marked universe settings.",
+    "filters": "Filters",
+    "timeframe": "Timeframe",
+    "strategy": "Strategy condition",
+    "holding": "Holding scope",
+    "state": "Rule state",
+    "freshness": "Data freshness",
+    "risk": "Risk status",
+    "minScore": "Minimum technical score (0–100)",
+    "results": "Candidates",
+    "counts": "Showing {{shown}}; captured {{captured}}, currently valid {{current}}. Selected {{selected}} / {{markets}} eligible markets in the reviewed scope.",
+    "capturedAt": "Captured at",
+    "empty": "No records match these filters. Start a scan or inspect scope, historical snapshots and filters. This is not a whole-market conclusion.",
+    "noTags": "No rule tags",
+    "evidence": "View evidence",
+    "snapshot": "Snapshot ID",
+    "validation": {
+      "limit": "Use an integer from 1 to 10.",
+      "volume": "Enter a valid positive turnover, not a currency code.",
+      "spread": "Enter a positive spread no greater than 5 percent.",
+      "assets": "Enter unique plain-asset codes; stable assets are not plain bases.",
+      "minScore": "Enter 0–100; retaining the last valid filter."
+    },
+    "jobs": {
+      "empty": "Not scanned",
+      "running": "Scanning",
+      "cancelling": "Cancelling",
+      "complete": "Scan complete",
+      "cancelled": "Scan cancelled",
+      "failed": "Scan failed; previous results retained",
+      "interrupted": "Interrupted by restart"
+    },
+    "states": {
+      "all": "All states",
+      "matched": "Rule match",
+      "watch": "Watch",
+      "excluded": "Rule exclusion"
+    },
+    "holdings": {
+      "all": "All holdings",
+      "held": "Held",
+      "unheld": "Unheld"
+    },
+    "freshnessOptions": {
+      "all": "Current and historical",
+      "current": "Current only",
+      "historical": "Historical snapshot"
+    },
+    "risks": {
+      "all": "All risk states",
+      "unknown": "Uncalibrated / unknown"
+    },
+    "strategies": {
+      "all": "All strategies",
+      "trend_follow": "Bullish averages",
+      "macd_golden": "MACD golden state",
+      "volume_breakout": "Volume condition",
+      "momentum": "Bar momentum",
+      "pullback": "Near support",
+      "rebound": "Decline watch"
+    },
+    "exclusions": {
+      "invalid_spot_identity": "Invalid spot identity",
+      "market_identity_mismatch": "Market identity mismatch",
+      "not_confirmed_spot": "Not confirmed spot",
+      "inactive_or_unknown": "Inactive or unknown",
+      "different_quote_currency": "Different quote currency",
+      "asset_classification_unknown": "Asset classification unreviewed",
+      "duplicate_market": "Duplicate market",
+      "below_turnover_threshold": "Turnover below threshold",
+      "invalid_or_missing_statistics": "Invalid/missing statistics",
+      "native_turnover_missing": "Native quote turnover missing",
+      "statistics_time_missing": "Statistics source time missing",
+      "invalid_or_missing_liquidity": "Invalid liquidity evidence",
+      "incomplete_or_expired_evidence": "Incomplete/expired evidence",
+      "wide_spread": "Spread too wide",
+      "book_time_missing": "Orderbook source time missing"
+    },
+    "coverageDetails": "Coverage and exclusions",
+    "reasonHint": "One pair may have multiple reasons; counts are not additive. Reviewed scope is not the whole market.",
+    "otherReason": "Other data validation failure"
   }
 } as const

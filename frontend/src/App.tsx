@@ -25,6 +25,7 @@ const {
   OpportunitiesPage,
   StocksPage,
   CryptoPage,
+  CryptoOpportunitiesPage,
   AgentsPage,
   SettingsPage,
   DataSourcesPage,
@@ -307,6 +308,7 @@ function App() {
               <Route path="/getting-started" element={<GettingStartedPage />} />
               <Route path="/opportunities" element={<OpportunitiesPage />} />
               <Route path="/crypto" element={<CryptoPage />} />
+              <Route path="/crypto/opportunities" element={<CryptoOpportunitiesPage />} />
               <Route path="/portfolio" element={<StocksPage />} />
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/evaluations" element={<EvaluationsPage />} />
