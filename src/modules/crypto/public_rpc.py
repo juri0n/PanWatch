@@ -10,6 +10,30 @@ def handle_request(request, reader_factory=SpotReader):
     if not isinstance(request, dict):
         raise ValueError("request must be an object")
     operation = request.get("operation")
+    if operation == "history":
+        if set(request) != {"operation", "exchange", "requests", "limit"}:
+            raise ValueError("invalid public history fields")
+        items, limit = request["requests"], request["limit"]
+        if not isinstance(items, list) or not 1 <= len(items) <= 16 or type(limit) is not int or not 1 <= limit <= 121:
+            raise ValueError("invalid public history size")
+        pairs = []
+        for item in items:
+            if not isinstance(item, dict) or set(item) != {"symbol", "timeframe"} or item["timeframe"] not in ("1d", "1h"):
+                raise ValueError("invalid public history request")
+            Instrument(request["exchange"], item["symbol"])
+            pairs.append((item["symbol"], item["timeframe"]))
+        if len(set(pairs)) != len(pairs) or len({s for s, _ in pairs}) > 8:
+            raise ValueError("duplicate or oversized history scope")
+        reader = reader_factory(request["exchange"])
+        result = []
+        for symbol, timeframe in pairs:
+            row = {"symbol": symbol, "timeframe": timeframe}
+            try:
+                row["bars"] = reader.bars(symbol, timeframe=timeframe, limit=limit)
+            except Exception as exc:
+                row["error_type"] = type(exc).__name__
+            result.append(row)
+        return result
     fields = {"operation", "exchange", "symbol"}
     if operation == "quotes":
         fields = {"operation", "exchange", "symbols"}

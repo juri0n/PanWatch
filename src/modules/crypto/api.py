@@ -1,6 +1,7 @@
 """Mounted by the host behind its existing authentication boundary."""
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, StrictBool
+from .validation import ConfigFieldError
 
 router = APIRouter()
 
@@ -21,6 +22,8 @@ async def state(request: Request):
 async def configure(value: dict, request: Request):
     try:
         return await workflow(request).save(value)
+    except ConfigFieldError as exc:
+        raise HTTPException(422, {"code": exc.code, "message": str(exc), "field": exc.field}) from None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
 

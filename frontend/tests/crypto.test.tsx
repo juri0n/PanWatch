@@ -18,10 +18,27 @@ beforeEach(async () => {
 afterEach(cleanup)
 function open() { render(<MemoryRouter><ToastProvider><Crypto /></ToastProvider></MemoryRouter>) }
 
+it('explains the mistaken pair and currency-as-quantity before making a write', async () => {
+  const user = userEvent.setup()
+  open()
+  const pair = await screen.findByRole('textbox', { name: '交易对 1' })
+  await user.clear(pair)
+  await user.type(pair, 'BTC')
+  const quantity = screen.getByRole('textbox', { name: '持仓数量 1（BTC）' })
+  await user.clear(quantity)
+  await user.type(quantity, 'USDT')
+  await user.click(screen.getByRole('button', { name: '保存全部配置' }))
+  expect(await screen.findByText(/请填写完整交易对/)).toBeTruthy()
+  expect(screen.getByText(/请输入有效非负数量/)).toBeTruthy()
+  expect(document.activeElement).toBe(pair)
+  expect(pair.getAttribute('aria-invalid')).toBe('true')
+  expect(vi.mocked(fetchAPI).mock.calls.every(([, options]) => !options?.method)).toBe(true)
+})
+
 it('preserves exact decimal edits, blocks analysis of drafts, and discards without writing', async () => {
   const user = userEvent.setup()
   open()
-  const quantity = await screen.findByRole('textbox', { name: '数量 1' })
+  const quantity = await screen.findByRole('textbox', { name: '持仓数量 1（BTC）' })
   await waitFor(() => expect((quantity as HTMLInputElement).value).toBe(config.positions[0].quantity))
   await user.clear(quantity)
   await user.type(quantity, '0.000000000000000001')
@@ -34,7 +51,7 @@ it('preserves exact decimal edits, blocks analysis of drafts, and discards witho
 it('writes decimal strings and keeps notification opt-in off', async () => {
   const user = userEvent.setup()
   open()
-  const quantity = await screen.findByRole('textbox', { name: '数量 1' })
+  const quantity = await screen.findByRole('textbox', { name: '持仓数量 1（BTC）' })
   await waitFor(() => expect((quantity as HTMLInputElement).value).toBe(config.positions[0].quantity))
   await user.clear(quantity)
   await user.type(quantity, '0.000000000000000001')

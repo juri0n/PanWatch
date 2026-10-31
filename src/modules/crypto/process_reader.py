@@ -20,10 +20,10 @@ class ProcessSpotReader:
         self.prepared = {}
 
     def _request(self, operation, symbol, **options):
-        if operation != "quotes":
+        if operation not in ("quotes", "history"):
             Instrument(self.exchange, symbol)
         payload = {"operation": operation, "exchange": self.exchange,
-                   **({"symbols": symbol} if operation == "quotes" else {"symbol": symbol}), **options}
+                   **({"symbols": symbol} if operation == "quotes" else {"requests": symbol} if operation == "history" else {"symbol": symbol}), **options}
         # No host AI/auth keys, .env loading, PYTHONPATH or agent-supplied environment.
         env = {k: os.environ[k] for k in ("SystemRoot", "WINDIR", "TEMP", "TMP", "PATH", "HOME", "USERPROFILE") if k in os.environ}
         env["PYTHONUTF8"] = "1"
@@ -72,6 +72,20 @@ class ProcessSpotReader:
         if timeframe not in TIMEFRAMES or type(limit) is not int or not 1 <= limit <= 500:
             raise ValueError("unsupported timeframe or limit")
         return self._request("bars", symbol, timeframe=timeframe, limit=limit)
+
+    def history(self, requests, *, limit=121):
+        if not isinstance(requests, list) or not 1 <= len(requests) <= 16 or type(limit) is not int or not 1 <= limit <= 121:
+            raise ValueError("invalid history batch")
+        for request in requests:
+            if set(request) != {"symbol", "timeframe"} or request["timeframe"] not in ("1d", "1h"):
+                raise ValueError("invalid history request")
+            Instrument(self.exchange, request["symbol"])
+        result = self._request("history", requests, limit=limit)
+        if not isinstance(result, list) or len(result) != len(requests) or any(
+            item.get("symbol") != request["symbol"] or item.get("timeframe") != request["timeframe"]
+            for item, request in zip(result, requests)):
+            raise DataUnavailable("history identity mismatch")
+        return result
 
 
 def host_reader(exchange, *, https_proxy=None):

@@ -66,7 +66,7 @@ class SpotReader:
         import ccxt
         settings = {
             "enableRateLimit": True, "timeout": 15_000,
-            "options": {"defaultType": "spot"},
+            "options": {"defaultType": "spot", "fetchOHLCV": {"timezone": "UTC"}},
         }
         # Explicit infrastructure setting only, never an Agent/config JSON option.
         # Do not enable requests.trust_env: that would also read .netrc credentials.

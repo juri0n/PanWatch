@@ -15,6 +15,8 @@ from .adapter import SpotReader, Quote, number, DataUnavailable
 from .contracts import Holding, Instrument, Snapshot
 from .portfolio import validate_positions
 from .__main__ import collect
+from .technical import TechnicalCache, public_snapshot, current as technical_current
+from .validation import validate_position_fields, validate_threshold_price
 
 
 DEFAULT_CONFIG = {"exchange": "okx", "interval_seconds": 60, "positions": [], "alerts": []}
@@ -31,6 +33,7 @@ def validate_config(value):
     if not isinstance(positions, list) or len(positions) > 8:
         raise ValueError("At most eight manual positions are supported")
     if positions:
+        validate_position_fields(value["exchange"], positions)
         validate_positions(positions)
     # Validate exchange even for an empty portfolio.
     Instrument(value["exchange"], "BTC/USDT")
@@ -40,15 +43,13 @@ def validate_config(value):
     if not isinstance(alerts, list) or len(alerts) > 16:
         raise ValueError("At most sixteen thresholds are supported")
     seen = set()
-    for rule in alerts:
+    for index, rule in enumerate(alerts):
         if not isinstance(rule, dict) or set(rule) != {"symbol", "op", "price", "cooldown_minutes", "notify"}:
             raise ValueError("Invalid threshold fields")
         if (not isinstance(rule["symbol"], str) or not isinstance(rule["op"], str)
                 or rule["symbol"] not in {p["symbol"] for p in positions} or rule["op"] not in {">=", "<="}):
             raise ValueError("Threshold requires a holding and >= or <=")
-        if not isinstance(rule["price"], str):
-            raise ValueError("Threshold price must be a decimal string")
-        number(rule["price"], positive=True)
+        validate_threshold_price(rule, index)
         if type(rule["cooldown_minutes"]) is not int or not 1 <= rule["cooldown_minutes"] <= 10080:
             raise ValueError("Cooldown must be 1..10080 minutes")
         if type(rule["notify"]) is not bool:
@@ -129,6 +130,7 @@ class CryptoWorkflow:
         self.readers = {}
         self.stopping = False
         self.changed = asyncio.Event()
+        self.technical_cache = TechnicalCache()
 
     def view(self):
         config = self.store.get("config", DEFAULT_CONFIG)
@@ -138,7 +140,9 @@ class CryptoWorkflow:
                 snapshot_from(result)
             except (ValueError, KeyError, TypeError):
                 result = {**result, "status": "stale"}
-        reports = [{k: v for k, v in r.items() if k not in {"research", "snapshot"}} for r in self.store.reports()[:10]]
+        if "technical" in result:
+            result = {**result, "technical": [public_snapshot(item) for item in result["technical"]]}
+        reports = [{k: v for k, v in r.items() if k not in {"research", "snapshot", "technical"}} for r in self.store.reports()[:10]]
         return {"config": config, "snapshot": result, "reports": reports,
                 "events": self.store.get("events", []), "mode": "public-readonly"}
 
@@ -165,9 +169,10 @@ class CryptoWorkflow:
                     if exchange not in self.readers:
                         self.readers[exchange] = self.reader_factory(exchange)
                     reader = self.readers[exchange]
+                    technical = self.technical_cache.collect(exchange, [p["symbol"] for p in config["positions"]], reader)
                     if hasattr(reader, "prepare"):
                         reader.prepare([p["symbol"] for p in config["positions"]])
-                    return collect(config, reader)
+                    return {**collect(config, reader), "technical": technical}
                 result = await asyncio.to_thread(read)
                 snapshot_from(result)  # Collection may have consumed the freshness window.
                 self.store.put("snapshot", result)
@@ -233,7 +238,8 @@ class CryptoWorkflow:
         from .research import crypto_model_gateway
         policy = ResearchPolicy(profile="intraday", graph="intraday_fast", specialists=["technical"],
             trigger_mode="always", debate=False, max_feedback=0, deadline_seconds=90,
-            max_attempts=4, max_tools=2, max_total_tokens=16000, max_output_tokens=2048)
+            max_attempts=4, max_tools=2, max_total_tokens=min(160000, 64000 + 12000 * len(prepared.securities)),
+            max_output_tokens=8192)
         return await asyncio.wait_for(InvestmentResearch().run(prepared, model=crypto_model_gateway(context.ai_client),
             tools=EvidenceTools(prepared.evidence), policy=policy), timeout=95)
 
@@ -249,7 +255,9 @@ class CryptoWorkflow:
             from src.modules.research.orchestration.reporting import build_report
             context = await asyncio.to_thread(self.context_builder, "daily_report")
             language = context.report_language
-            prepared = to_research_input(snapshot, run_id=report["id"], language=language)
+            technical = result.get("technical", [])
+            captured_technical = [item for item in technical if technical_current(item)]
+            prepared = to_research_input(snapshot, run_id=report["id"], language=language, technical=technical)
             research = await self.research(prepared, context)
             if config != self.store.get("config", DEFAULT_CONFIG):
                 raise DataUnavailable("Holdings changed while report was running")
@@ -258,14 +266,29 @@ class CryptoWorkflow:
             payload = research.model_dump(mode="json")
             markdown = build_report("intraday_monitor", payload, securities=[s.model_dump(mode="json") for s in prepared.securities],
                 evidence=[e.model_dump(mode="json") for e in prepared.evidence], as_of=prepared.as_of.isoformat(), language=language)["content"]
-            notice = ("Public spot quotes and manual holdings only. Models see position presence, never quantities. Indicators, news, onchain, cost basis and tax data are unavailable. No execution capability."
-                      if language == "en-US" else "仅使用公共现货报价与手动持仓；模型只接收是否持仓的标记，不接收数量。暂无 K 线指标、新闻、链上、成本或税务数据。不具备交易执行能力。")
+            notice = ("Public spot data and manual holdings; current completed-bar indicators use the stock calculator. Models see presence, never quantities. Missing timeframe indicators, news, onchain, cost basis and tax data are unavailable. No execution capability."
+                      if language == "en-US" else "公共现货数据与手动持仓；有效的已收盘K线指标复用股票计算器。模型只接收是否持仓的标记，不接收数量。缺失周期的指标、新闻、链上、成本或税务数据均不可用。不具备交易执行能力。")
             facts = [f"- {p['symbol']} · {p['quantity']} · {p['price']} {p['quote_currency']} · {p['source_time']}" for p in snapshot.as_dict()["positions"]]
             markdown = markdown.replace("## 个股分析", "## 现货标的分析").replace("## Stock analysis", "## Spot instrument analysis")
-            markdown = "# PanWatch Crypto · 24/7\n\n" + notice + "\n\n" + "\n".join(facts) + "\n\n" + markdown
-            report.update(status=research.completion, markdown=markdown, research=payload, snapshot=snapshot.as_dict())
+            technical_lines = []
+            for item in technical:
+                label = f"{item['symbol']} / {item['timeframe']}"
+                if item in captured_technical:
+                    values = item["indicators"]
+                    metrics = " · ".join(f"{name}={values[name]:.8g}" for name in ("ma20", "rsi6", "macd_hist", "atr", "volume_ratio") if values.get(name) is not None)
+                    technical_lines.append(f"- {label} · {item['bar_count']} bars · close {datetime.fromtimestamp(item['source_close_ms']/1000, timezone.utc).isoformat()} · {metrics}")
+                else:
+                    technical_lines.append(f"- {label}: {item['status']} ({item.get('reason', 'not_current')})")
+            expired = any(not technical_current(item) for item in captured_technical)
+            if expired:
+                technical_lines.append("技术快照已跨越 K 线边界，仅作历史记录，本次不推送。 / Candle boundary passed: historical record, delivery suppressed.")
+            markdown = "# PanWatch Crypto · 24/7\n\n" + notice + "\n\n" + "\n".join(facts) + "\n\n" + "\n".join(technical_lines) + "\n\n" + markdown
+            report.update(status=research.completion, markdown=markdown, research=payload, snapshot=snapshot.as_dict(),
+                          technical=[public_snapshot(item) for item in technical])
             self.store.report(report)  # Persist evidence before attempting external delivery.
-            if notify and research.completion == "complete":
+            if notify and expired:
+                report["delivery"] = {"status": "skipped", "reason": "technical_expired"}
+            elif notify and research.completion == "complete":
                 report["delivery"] = {"status": "sending"}
                 self.store.report(report)
                 report["delivery"] = await self.deliver(context, "PanWatch Crypto", markdown)
