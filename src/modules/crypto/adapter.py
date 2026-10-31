@@ -71,6 +71,7 @@ class SpotReader:
         # Explicit infrastructure setting only, never an Agent/config JSON option.
         # Do not enable requests.trust_env: that would also read .netrc credentials.
         proxy = https_proxy or os.environ.get("PANWATCH_CRYPTO_HTTPS_PROXY")
+        self.proxy = proxy
         if proxy:
             parsed = urlsplit(proxy)
             if parsed.scheme not in {"http", "https"} or not parsed.hostname:

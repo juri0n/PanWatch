@@ -120,6 +120,14 @@ def snapshot_from(result):
 
 
 class CryptoWorkflow:
+    @property
+    def opportunities(self):
+        if not hasattr(self,'_opportunities'):
+            from .opportunities import OpportunityService
+            self._opportunities=OpportunityService(Store(self.store.path.with_name('crypto_opportunities.sqlite3')),
+                lambda:self.store.get('config',DEFAULT_CONFIG),self.reader_factory)
+        return self._opportunities
+
     def __init__(self, path, context_builder, *, reader_factory=SpotReader):
         self.store = Store(path)
         self.context_builder = context_builder
@@ -315,6 +323,7 @@ class CryptoWorkflow:
 
     async def stop(self):
         self.stopping = True
+        if hasattr(self,'_opportunities'):await self._opportunities.stop()
         tasks = [t for t in (self.poll_task, self.report_task) if t and not t.done()]
         for task in tasks:
             task.cancel()

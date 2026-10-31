@@ -46,3 +46,22 @@ async def report(value: ReportRequest, request: Request):
         raise HTTPException(409, str(exc)) from None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
+
+
+@router.get('/opportunities')
+async def opportunities(request:Request,timeframe:str='1d',strategy:str='all',holding:str='all',state:str='all',freshness:str='all',risk:str='all',min_score:float=0):
+    try:
+        return workflow(request).opportunities.view(timeframe=timeframe,strategy=strategy,holding=holding,state=state,freshness=freshness,risk=risk,min_score=min_score)
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
+
+
+@router.post('/opportunities/scans',status_code=202)
+async def start_opportunity_scan(value:dict,request:Request):
+    try:return await workflow(request).opportunities.start(value)
+    except (ValueError,TypeError) as exc:raise HTTPException(422,str(exc)) from None
+    except RuntimeError as exc:raise HTTPException(409,str(exc)) from None
+
+
+@router.post('/opportunities/cancel',status_code=202)
+async def cancel_opportunity_scan(request:Request):
+    return await workflow(request).opportunities.cancel()
