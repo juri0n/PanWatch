@@ -1,0 +1,9 @@
+{
+  "exchange": "okx",
+  "quote_currency": "USDT",
+  "limit": 10,
+  "min_quote_volume": "10000000",
+  "max_spread_pct": "0.3",
+  "reviewed_plain_assets": ["BTC", "ETH"],
+  "deadline_seconds": 180
+}
