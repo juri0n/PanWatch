@@ -122,13 +122,19 @@ def run_probe(config, *, reader_factory=SpotReader, clock=time.monotonic, includ
 
 def main():
     try:
-        if sys.argv[1:] not in ([],['--with-bars']):
+        args=sys.argv[1:]
+        if args not in ([],['--with-bars'],['--coordinated'],['--with-bars','--coordinated']):
             raise ValueError('unsupported probe option')
-        raw=sys.stdin.read(16385)
+        coordinated='--coordinated' in args
+        raw=sys.stdin.readline(16385) if coordinated else sys.stdin.read(16385)
         if len(raw)>16384:
             raise ValueError('request too large')
         config=UniverseConfig.from_dict(json.loads(raw))
-        print(json.dumps({'result':run_probe(config,include_bars=bool(sys.argv[1:]))},allow_nan=False))
+        factory=SpotReader
+        if coordinated:
+            from .worker_io import child_permit
+            factory=lambda exchange:SpotReader(exchange,request_gate=child_permit)
+        print(json.dumps({'result':run_probe(config,include_bars='--with-bars' in args,reader_factory=factory)},allow_nan=False))
         return 0
     except Exception as exc:
         print(json.dumps({'error_type':type(exc).__name__}))

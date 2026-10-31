@@ -58,7 +58,7 @@ class SpotReader:
     to an Agent. No credentials can be supplied through this API or its config.
     """
 
-    def __init__(self, exchange: str, *, max_age_seconds: int = 120, https_proxy: str | None = None):
+    def __init__(self, exchange: str, *, max_age_seconds: int = 120, https_proxy: str | None = None, request_gate=None):
         if exchange not in EXCHANGES:
             raise ValueError("unsupported exchange")
         if type(max_age_seconds) is not int or not 1 <= max_age_seconds <= 300:
@@ -77,6 +77,11 @@ class SpotReader:
                 raise ValueError("invalid crypto HTTPS proxy")
             settings["httpsProxy"] = proxy
         self.__client = getattr(ccxt, exchange)(settings)
+        if request_gate is not None:
+            original=self.__client.fetch
+            def guarded(*args,**kwargs):
+                with request_gate():return original(*args,**kwargs)
+            self.__client.fetch=guarded
         self.exchange = exchange
         self.max_age_ms = max_age_seconds * 1000
 

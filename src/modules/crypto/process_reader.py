@@ -12,18 +12,23 @@ from .contracts import Instrument
 class ProcessSpotReader:
     max_age_ms = 120000
 
-    def __init__(self, exchange, python, *, https_proxy=None):
+    def __init__(self, exchange, python, *, https_proxy=None, coordinator=None):
         Instrument(exchange, "BTC/USDT")
         self.exchange = exchange
         self.python = str(Path(python).resolve(strict=True))
         self.proxy = https_proxy
         self.prepared = {}
+        self.coordinator = coordinator
 
     def _request(self, operation, symbol, **options):
         if operation not in ("quotes", "history"):
             Instrument(self.exchange, symbol)
         payload = {"operation": operation, "exchange": self.exchange,
                    **({"symbols": symbol} if operation == "quotes" else {"requests": symbol} if operation == "history" else {"symbol": symbol}), **options}
+        if self.coordinator is not None:
+            from .worker_io import execute
+            return execute(self.python,'public_rpc',payload,exchange=self.exchange,coordinator=self.coordinator,
+                           priority=0,timeout=45,proxy=self.proxy or os.environ.get('PANWATCH_CRYPTO_HTTPS_PROXY'))['result']
         # No host AI/auth keys, .env loading, PYTHONPATH or agent-supplied environment.
         env = {k: os.environ[k] for k in ("SystemRoot", "WINDIR", "TEMP", "TMP", "PATH", "HOME", "USERPROFILE") if k in os.environ}
         env["PYTHONUTF8"] = "1"
@@ -89,9 +94,10 @@ class ProcessSpotReader:
 
 
 def host_reader(exchange, *, https_proxy=None):
+    from .read_coordinator import COORDINATOR
     root = Path(__file__).resolve().parents[3]
     default = root / ".venv-crypto" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     configured = os.environ.get("PANWATCH_CRYPTO_PYTHON")
     if configured or default.is_file():
-        return ProcessSpotReader(exchange, configured or default, https_proxy=https_proxy)
-    return SpotReader(exchange, https_proxy=https_proxy)
+        return ProcessSpotReader(exchange, configured or default, https_proxy=https_proxy,coordinator=COORDINATOR)
+    return SpotReader(exchange, https_proxy=https_proxy,request_gate=lambda:COORDINATOR.lease(exchange,0))

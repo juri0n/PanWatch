@@ -17,7 +17,7 @@ from .adapter import number, TIMEFRAMES, utc_ms
 from .contracts import Instrument
 
 
-def collect_probe(config, python, *, https_proxy=None, include_bars=False):
+def collect_probe(config, python, *, https_proxy=None, include_bars=False, coordinator=None, cancel=None):
     if type(include_bars) is not bool:
         raise ValueError('invalid capture mode')
     env={key:os.environ[key] for key in ('SystemRoot','WINDIR','TEMP','TMP','PATH','HOME','USERPROFILE') if key in os.environ}
@@ -25,7 +25,13 @@ def collect_probe(config, python, *, https_proxy=None, include_bars=False):
     proxy=https_proxy or os.environ.get('PANWATCH_CRYPTO_HTTPS_PROXY')
     if proxy:
         env['PANWATCH_CRYPTO_HTTPS_PROXY']=proxy
-    result=subprocess.run([str(Path(python).resolve(strict=True)),'-m','src.modules.crypto.scan_worker',*(['--with-bars'] if include_bars else [])],
+    if coordinator is not None:
+        from .worker_io import execute
+        envelope=execute(python,'scan_worker',config.as_dict(),exchange=config.exchange,coordinator=coordinator,
+                         priority=1,timeout=config.deadline_seconds+20,proxy=proxy,cancel=cancel,
+                         options=('--with-bars',) if include_bars else ())
+        result=type('Reply',(),{'returncode':0,'stdout':json.dumps(envelope,allow_nan=False)})()
+    else:result=subprocess.run([str(Path(python).resolve(strict=True)),'-m','src.modules.crypto.scan_worker',*(['--with-bars'] if include_bars else [])],
         input=json.dumps(config.as_dict()),capture_output=True,text=True,encoding='utf-8',
         env=env,cwd=Path(__file__).resolve().parents[3],timeout=config.deadline_seconds+20,
         creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))

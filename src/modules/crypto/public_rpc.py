@@ -59,10 +59,15 @@ def handle_request(request, reader_factory=SpotReader):
 
 def main():
     try:
-        raw = sys.stdin.read(2049)
+        coordinated=sys.argv[1:]==['--coordinated']
+        if sys.argv[1:] and not coordinated:raise ValueError('invalid public worker option')
+        raw = sys.stdin.readline(2049) if coordinated else sys.stdin.read(2049)
         if len(raw) > 2048:
             raise ValueError("request too large")
-        result = handle_request(json.loads(raw))
+        if coordinated:
+            from .worker_io import child_permit
+            result=handle_request(json.loads(raw),lambda exchange:SpotReader(exchange,request_gate=child_permit))
+        else:result = handle_request(json.loads(raw))
         print(json.dumps({"result": result}, allow_nan=False))
         return 0
     except Exception as exc:
